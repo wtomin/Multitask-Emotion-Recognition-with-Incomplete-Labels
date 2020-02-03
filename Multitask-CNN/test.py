@@ -18,7 +18,7 @@ class Tester:
         self._opt = TestOptions().parse()
         PRESET_VARS = PATH()
         self._model = ModelsFactory.get_by_name(self._opt.model_name, self._opt)
-        val_transforms = self._model.current_model.backbone.compose_transforms
+        val_transforms = self._model.resnet50.backbone.compose_transforms
         #self.test_dataloaders = dict([(k, CustomDatasetDataLoader(self._opt, self._opt.mode, self.datasets_names[k], transform = val_transforms).load_data()) for k in self._opt.test_tasks_seq])
         self.validation_dataloaders = Multitask_DatasetDataLoader(self._opt, train_mode = self._opt.mode, transform = val_transforms)
         self.validation_dataloaders = self.validation_dataloaders.load_multitask_val_test_data()
@@ -36,7 +36,7 @@ class Tester:
         # set model to eval
         self._model.set_eval()
         model_paths = [self._opt.teacher_model_path]
-        if ensemble:
+        if self._opt.ensemble:
             for i in range(self._opt.n_students):
                 path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50.pth'.format(i))
                 assert os.path.exists(path)
@@ -64,6 +64,8 @@ class Tester:
                     track_val['outputs'].append(outputs[task][task])
                     track_val['labels'].append(wrapped_v_batch[task]['label'])
                     track_val['estimates'].append(estimates[task][task])
+                    # if i_val_batch>30:
+                    #     break
                 # calculate metric
                 for key in track_val.keys():
                     track_val[key] = np.concatenate(track_val[key], axis=0)
@@ -94,15 +96,15 @@ class Tester:
             elif task == 'VA':
                 merged_preds = np.mean(preds, axis=0)
             labels = np.mean(labels,axis=0)
-            assert labels.shape[0] == merged_preds.shape[0]
+            #assert labels.shape[0] == merged_preds.shape[0]
             metric_func = self._model.get_metrics_per_task()[task]
-            eval_items, eval_res = metric_func(merged_preds, labels)
+            eval_items, eval_res = metric_func(merged_preds.squeeze(), labels.squeeze())
             now_time = time.strftime("%H:%M", time.localtime(val_start_time))
-            output = "Merged First method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format(i, task, 
+            output = "Merged First method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format( task, 
                 now_time, eval_items[0], eval_items[1], eval_res)
             print(output)
         # one choice, average the raw outputs
-        for task in self._opt.taks:
+        for task in self._opt.tasks:
             preds = []
             labels = []
             for i in range(len(estimates_record.keys())):
@@ -111,26 +113,29 @@ class Tester:
             preds = np.array(preds)
             labels = np.array(labels)
             #assert labels[0] == labels[1]
-            labels = np.mean(labels,axis=0)
-            preds = np.mean(preds, axis=0)
             if task == 'AU':
                 merged_preds = (preds>0.5).astype(np.int)
+                merged_preds = mode(merged_preds, axis=0)[0]
             elif task=='EXPR':
-                merged_preds = softmax(preds, axis=-1).argmax(-1).astype(np.int)
+                merged_preds = softmax(preds, axis=-1).mean(0).argmax(-1).astype(np.int)
             else:
                 N = self._opt.digitize_num
-                v = softmax(preds[:, :N], axis=-1)
-                a = softmax(preds[:, N:], axis=-1)
+                v = softmax(preds[:, :, :N], axis=-1)
+                a = softmax(preds[:, :, N:], axis=-1)
                 bins = np.linspace(-1, 1, num=self._opt.digitize_num)
                 v = (bins * v).sum(-1)
                 a = (bins * a).sum(-1)
-                merged_preds = np.stack([v, a], axis = 1)
+                merged_preds = np.stack([v.mean(0), a.mean(0)], axis = 1)
+            labels = np.mean(labels, axis=0)
             metric_func = self._model.get_metrics_per_task()[task]
-            eval_items, eval_res = metric_func(merged_preds, labels)
+            eval_items, eval_res = metric_func(merged_preds.squeeze(), labels.squeeze())
             now_time = time.strftime("%H:%M", time.localtime(val_start_time))
-            output = "Merged Second method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format(i, task, 
+            output = "Merged Second method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format(task, 
                 now_time, eval_items[0], eval_items[1], eval_res)
             print(output)
+        save_path = 'evaluate_val_set.pkl'
+        data = {'outputs':outputs_record, 'estimates':estimates_record, 'labels':labels_record, 'metrics':metrics_record}
+        pickle.dump(data, open(save_path, 'wb'))
 
     def _test(self):
         return
