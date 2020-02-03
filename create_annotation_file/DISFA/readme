@@ -3,4 +3,4 @@ second level: ['Training_Set', 'Validation_Set'] or ['Test_Set']
 third level: ['label', 'path', 'frames_ids']
 
 DISFA dataset is merged with Aff-wild dataset AU Set. 
-To create merged dataset, use 
+To create merged dataset, use create_annotation_Mixed_AU.py
