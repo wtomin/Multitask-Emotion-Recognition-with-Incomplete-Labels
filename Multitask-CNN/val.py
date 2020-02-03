@@ -29,7 +29,7 @@ class Tester:
         if self._opt.mode == 'Validation':
             self._validate()
         else:
-            self._test()
+            raise ValueError("do not call val.py with test mode.")
         
     def _validate(self):
         val_start_time = time.time()
@@ -136,39 +136,7 @@ class Tester:
         save_path = 'evaluate_val_set.pkl'
         data = {'outputs':outputs_record, 'estimates':estimates_record, 'labels':labels_record, 'metrics':metrics_record}
         pickle.dump(data, open(save_path, 'wb'))
-
-    def _test(self):
-        return
-        # test_start_time = time.time()
-        # self._model.set_eval()
-        # dicts = {}
-        # for task in self._opt.tasks:
-        #     print("Evaluate the current model in {} dataset".format(self.datasets_names[task]))
-        #     track_preds = []
-        #     track_labels = []
-        #     track_indexes = []
-        #     track_paths = []
-        #     for i_test_batch, test_batch in tqdm(enumerate(self.test_dataloaders[task]), total = len(self.test_dataloaders[task])):
-        #         outputs = self._model.inference_current(test_batch, task, return_estimates=True)
-        #         label = test_batch['label']
-        #         index = test_batch['index']
-        #         pred = outputs[task]
-        #         track_labels.append(deepcopy(label))
-        #         track_preds.append(deepcopy(pred))
-        #         track_indexes.append(deepcopy(index))
-        #         del test_batch, outputs
-        #     preds = np.concatenate(track_preds, axis=0)
-        #     labels = np.concatenate(track_labels, axis=0)
-        #     track_indexes = np.concatenate(track_indexes, axis=0)
-        #     data = dict([('{}'.format(task), preds), ('index',track_indexes)])
-        #     if self.has_label:
-        #         metric = self._model.get_metrics_per_task()[task]
-        #         eval_item, eval_res = metric(preds, labels)
-        #         data.update({'metric':eval_res, 'metric_0': eval_item[0], 'metric_1': eval_item[1]})
-        #         print("Evaluation Performanace for {}: res {}, res_0 {}, res_1 {}".format(task, eval_res, eval_item[0], eval_item[1]))
-        #     dicts[task] = data
-        # save_path = os.path.join(self._opt.loggings_dir, self._opt.save_path)
-        # pickle.dump(dicts, open(save_path, 'wb'))
+        
 
 
 if __name__ == "__main__":
