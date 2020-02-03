@@ -1,0 +1,4 @@
+Create annotation file which is a dictionary:
+first level: ['AU_Set', 'EXPR_Set', 'VA_Set']
+second level: ['Training_Set', 'Validation_Set'] or ['Test_Set']
+third level: ['label', 'path', 'frames_ids']
