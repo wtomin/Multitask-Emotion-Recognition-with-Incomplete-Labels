@@ -19,6 +19,7 @@ class Test_dataset(object):
             self._transform = self._create_transform()
         # read dataset
         self._data = video_data
+        self._read_dataset()
     def __getitem__(self, index):
         assert (index < self._dataset_size)
         image = None
@@ -66,3 +67,5 @@ class Test_dataset(object):
                                                  std=[0.229, 0.224, 0.225]),
                             ]
         self._transform = transforms.Compose(transform_list)
+
+
