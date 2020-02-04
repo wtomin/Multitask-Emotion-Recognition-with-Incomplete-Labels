@@ -13,6 +13,10 @@ from tqdm import tqdm
 from copy import deepcopy
 from scipy.stats import mode
 from scipy.special import softmax
+import math
+import pickle
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
 class Tester:
     def __init__(self):
         self._opt = TestOptions().parse()
@@ -64,8 +68,8 @@ class Tester:
                     track_val['outputs'].append(outputs[task][task])
                     track_val['labels'].append(wrapped_v_batch[task]['label'])
                     track_val['estimates'].append(estimates[task][task])
-                    # if i_val_batch>30:
-                    #     break
+                    ##if i_val_batch>10:
+                        #break
                 # calculate metric
                 for key in track_val.keys():
                     track_val[key] = np.concatenate(track_val[key], axis=0)
@@ -103,7 +107,7 @@ class Tester:
             output = "Merged First method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format( task, 
                 now_time, eval_items[0], eval_items[1], eval_res)
             print(output)
-        # one choice, average the raw outputs
+        # one choice, average the raw outputs, this one is better than the first one
         for task in self._opt.tasks:
             preds = []
             labels = []
@@ -114,7 +118,7 @@ class Tester:
             labels = np.array(labels)
             #assert labels[0] == labels[1]
             if task == 'AU':
-                merged_preds = (preds>0.5).astype(np.int)
+                merged_preds = (sigmoid(preds)>0.5).astype(np.int)
                 merged_preds = mode(merged_preds, axis=0)[0]
             elif task=='EXPR':
                 merged_preds = softmax(preds, axis=-1).mean(0).argmax(-1).astype(np.int)
@@ -136,8 +140,6 @@ class Tester:
         save_path = 'evaluate_val_set.pkl'
         data = {'outputs':outputs_record, 'estimates':estimates_record, 'labels':labels_record, 'metrics':metrics_record}
         pickle.dump(data, open(save_path, 'wb'))
-        
-
 
 if __name__ == "__main__":
     Tester()
