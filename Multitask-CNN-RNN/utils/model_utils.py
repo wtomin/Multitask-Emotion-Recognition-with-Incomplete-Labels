@@ -224,8 +224,14 @@ class AU_Losses(object):
             task_loss = FocalLoss(self.class_num, self._opt.batch_size, activation = 'sigmoid')
         return task_loss
     def get_distillation_loss(self):
-        distillation_loss = nn.L1Loss().cuda()
-        return distillation_loss
+        #distillation_loss = nn.L1Loss().cuda()
+        #return distillation_loss
+        # no longer use the distillation loss, but use the cross entropy loss
+        def bce_with_logits(x, y):
+            y = torch.sigmoid(y)
+            return F.binary_cross_entropy_with_logits(x, y)
+        return bce_with_logits
+            
 
 class EXPR_Losses(object):
     def __init__(self, opt):
@@ -482,39 +488,4 @@ class Model(nn.Module):
             o = m(f)
             outputs[task] = o['output']
             features[task] = o['feature']
-        return {'output':outputs, 'feature':features}
-
-class GRU_Head(nn.Module):
-    def __init__(self, input_dim, hidden_dim, n_class = 8):
-        super(GRU_Head, self).__init__()
-        self._name = 'Head'
-        self.GRU_layer = nn.GRU(input_dim, hidden_dim, batch_first= True, bidirectional=True)
-        self.fc_1 = nn.Linear(hidden_dim*2, n_class)
-    def forward(self, x):
-        B, N, C = x.size()
-        self.GRU_layer.flatten_parameters()
-        f0 = F.relu(self.GRU_layer(x)[0])
-        output = self.fc_1(f0)
-        return {'output':output, 'feature':f0}
-
-class Seq_Model(nn.Module):
-    def __init__(self, backbone, classifier, sofar_task):
-        super(Seq_Model, self).__init__()
-        self._name = 'Seq_Model'
-        self.backbone = backbone
-        self.classifier = classifier
-        self.sofar_task = sofar_task
-    def forward(self, x):
-        B, N, C, W, H = x.size()
-        x = x.view(B*N, C, W, H)
-        out_backbone = self.backbone(x)
-        outputs = {}
-        features = {}
-        for i,m in enumerate(self.classifier):
-            task = self.sofar_task[i] 
-            feature = out_backbone['feature'][task]
-            feature = feature.view(B, N ,-1)
-            o = m(feature)
-            outputs[task] = o['output']
-            features[task] = feature
         return {'output':outputs, 'feature':features}
