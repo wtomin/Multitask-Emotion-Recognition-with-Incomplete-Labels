@@ -5,6 +5,13 @@ class TestOptions(BaseOptions):
     def initialize(self):
         BaseOptions.initialize(self)
         self.is_train = False
-        self._parser.add_argument('--test_tasks_seq',default = ['AU', 'EXPR', 'VA'], type=str, nargs="+",
-                                                        help='The sequence of tasks to be trained.')
-        self._parser.add_argument('--save_path', type=str, default='output.pkl', help=' save of pickle path (predictions and possibly metric)')
+        self._parser.add_argument('--teacher_model_path',default = '', type=str,  help='the model to be evaluated')
+        self._parser.add_argument("--eval_with_teacher", action='store_true' )
+        self._parser.add_argument('--mode', type=str, default='Validation', choices=['Validation', 'Test'], help='Whether \
+        	evaluate it on the validation set or the test set.')
+        self._parser.add_argument('--ensemble', action='store_true')
+        self._parser.add_argument("--n_students", type=int, default=5)
+        self._parser.add_argument("--save_dir", type=str, default = "Predictions")
+
+        self.is_train = False
+

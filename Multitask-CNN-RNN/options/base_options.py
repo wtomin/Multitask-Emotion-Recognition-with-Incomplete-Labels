@@ -18,13 +18,17 @@ class BaseOptions():
         self._parser.add_argument('--AU_criterion', type=str, default = 'BCE', choices = ['FocalLoss', 'BCE'])
         self._parser.add_argument('--EXPR_criterion', type=str, default = 'CE', choices = ['FocalLoss', 'CE'])
         self._parser.add_argument('--VA_criterion', type=str, default = 'CCC_CE', choices = ['CCC', 'CCC_CE', 'CCC_FocalLoss'])
-
-        #self._parser.add_argument('--force_balance', action='store_true', help='force data balanced for training set')
+        self._parser.add_argument('--lambda_AU', type=float, default= 1., help='weight for AU.')
+        self._parser.add_argument('--lambda_EXPR', type=float, default= 1., help='weight for EXPR.')
+        self._parser.add_argument('--lambda_V', type=float, default= 1., help='weight for valence.')
+        self._parser.add_argument('--lambda_A', type=float, default= 1., help='weight for arousal.')
+        self._parser.add_argument('--lambda_ccc', type=float, default= 1., help='weight for ccc loss in (CE + lambda_ccc*ccc).')
+        self._parser.add_argument('--lambda_teacher', type=float, default = 0.4, help='weight for distillation loss when the ground truth exists (between 0 to 1)')
+        
+        self._parser.add_argument('--force_balance', action='store_true', help='force data balanced for training set')
         self._parser.add_argument('--dataset_names', type=str, default = ['Mixed_EXPR','Mixed_AU','Mixed_VA'],nargs="+")
         self._parser.add_argument('--tasks', type=str, default = ['EXPR','AU','VA'],nargs="+")
         # 'dataset_names' need to be in the same order as the 'tasks'
-        self._parser.add_argument('--seq_len', type=int, default=64, help='length of input seq ')
-        self._parser.add_argument('--frozen', action='store_true')
         self._parser.add_argument('--hidden_size', type=int, default = 128, help='the embedding size of each output head' )
         self._parser.add_argument('--batch_size', type=int, default= 20, help='input batch size per task')
         self._parser.add_argument('--image_size', type=int, default= 224, help='input image size') # reducing iamge size is acceptable
@@ -38,7 +42,8 @@ class BaseOptions():
         self._parser.add_argument('--pretrained_dataset', type=str, default='ferplus',
                                   choices = ['ferplus', 'sfew','imagenet'], 
                                   help="the pretrained_dataset of the face feature extractor, choices:['ferplus', 'sfew','imagenet']")
-        self._parser.add_argument('--pretrained_teacher_model', type=str, default='')
+        self._parser.add_argument('--pretrained_teacher_model', type=str, default='/media/Samsung/Aff-wild2-Challenge/exps/multitask_single_image/Teacher_Model/checkpoints/image_size_112_lambda_AU_8_step_decay_3_adam/net_epoch_0_id_resnet50.pth')
+
         self._initialized = True
 
     def parse(self):
@@ -70,9 +75,10 @@ class BaseOptions():
         if os.path.exists(models_dir):
             if self._opt.load_epoch == -1:
                 load_epoch = 0
-                for file in os.listdir(models_dir):
-                    if file.startswith("net_epoch_"):
-                        load_epoch = max(load_epoch, int(file.split('_')[2]))
+                if self.is_train:
+                    for file in os.listdir(models_dir):
+                        if file.startswith("net_epoch_"):
+                            load_epoch = max(load_epoch, int(file.split('_')[2]))
                 self._opt.load_epoch = load_epoch
             else:
                 found = False
