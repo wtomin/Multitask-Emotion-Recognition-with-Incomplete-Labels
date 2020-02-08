@@ -197,12 +197,22 @@ class ResNet50(BaseModel):
         if self._is_train:
             for t in self._opt.tasks:
                 input_image = Variable(self._input_image[t])
+                label = Variable(self._label[t])
                 output = self.resnet50(input_image)
                 with torch.no_grad():
                     teacher_preds = teacher_model.resnet50(input_image)
                 for task in self._opt.tasks:
-                    criterion_task = self._criterions_per_task[task].get_distillation_loss()
-                    loss_task = criterion_task(output['output'][task], teacher_preds['output'][task])
+                    distillation_task = self._criterions_per_task[task].get_distillation_loss()
+                    loss_task = distillation_task(output['output'][task], teacher_preds['output'][task])
+                    if task == t:
+                        if task !='VA':
+                            criterion_task = self._criterions_per_task[t].get_task_loss()
+                            loss_task = self._opt.lambda_teacher * loss_task + (1 - self._opt.lambda_teacher) * criterion_task(output['output'][t], label) 
+                        else:
+                            criterion_task = self._criterions_per_task[t].get_task_loss()
+                            loss_v, loss_a = criterion_task(output['output'][t], label) 
+                            loss_task = [self._opt.lambda_teacher * loss_task[0] + (1 - self._opt.lambda_teacher) *loss_v,
+                                        self._opt.lambda_teacher * loss_task[1] + (1 - self._opt.lambda_teacher) *loss_a,]
                     if task!= 'VA':
                         loss_per_task[task] += loss_task.item()
                         loss += loss_task
