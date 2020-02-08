@@ -17,6 +17,9 @@ import pickle
 def sigmoid(x):
     return 1/(1+np.exp(-x))
 PRESET_VARS = PATH()
+#################RuntimeError: received 0 items of ancdata ###########################
+torch.multiprocessing.set_sharing_strategy("file_system")
+#########################################################################
 class Tester:
     def __init__(self):
         self._opt = TestOptions().parse()
@@ -33,7 +36,10 @@ class Tester:
     def _test(self):
         self._model.set_eval()
         val_transforms = self._model.resnet50.backbone.compose_transforms
-        model_paths = [self._opt.teacher_model_path]
+        if self._opt.eval_with_teacher:
+            model_paths = [self._opt.teacher_model_path]
+        else:
+            model_paths = []
         if self._opt.ensemble:
             for i in range(self._opt.n_students):
                 path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50.pth'.format(i))
@@ -68,6 +74,8 @@ class Tester:
                     estimates_record[i][task][video] = track['estimates']
                     frames_ids_record[i][task][video] = track['frames_ids']
                     print("Model ID {} Task {} Current {}/{}".format(i, task[:-4], i_video, len(task_data_file.keys())))
+                    save_path = '{}/{}/{}.txt'.format(i, task, video)
+                    self.save_to_file(track['frames_ids'], track['estimates'], save_path, task=task[:-4])
                     # if i_video>=1:
                     #     break
         #merge the raw outputs 
@@ -81,12 +89,19 @@ class Tester:
                 #assert frames_ids_record[0][task][video] == frames_ids_record[1][task][video]
                 video_frames_ids = frames_ids_record[0][task][video] 
                 if task == 'AU_Set':
-                    merged_preds = (sigmoid(preds)>0.5).astype(np.int)
-                    merged_preds = mode(merged_preds, axis=0)[0].squeeze()
-                    self.save_to_file(video_frames_ids, merged_preds, video, task='AU')
+                    merged_preds = sigmoid(preds)
+                    best_thresholds_over_models = [0.1448537,  0.03918985, 0.13766725, 0.02652811, 0.40589422, 0.15572545,
+     0.04808964, 0.10848708]
+                    print("The best AU thresholds over models: {}".format(best_thresholds_over_models))
+                    merged_preds = np.mean(merged_preds, axis=0) 
+                    merged_preds = merged_preds > (np.ones_like(merged_preds)*best_thresholds_over_models)
+                    merged_preds = merged_preds.astype(np.int64)
+                    save_path = '{}/{}/{}.txt'.format('merged', task, video)
+                    self.save_to_file(video_frames_ids, merged_preds, save_path, task='AU')
                 elif task == 'EXPR_Set':
                     merged_preds = softmax(preds, axis=-1).mean(0).argmax(-1).astype(np.int).squeeze()
-                    self.save_to_file(video_frames_ids, merged_preds, video, task='EXPR')
+                    save_path = '{}/{}/{}.txt'.format('merged',task,  video)
+                    self.save_to_file(video_frames_ids, merged_preds, save_path, task='EXPR')
                 else:
                     N = self._opt.digitize_num
                     v = softmax(preds[:, :, :N], axis=-1)
@@ -94,17 +109,15 @@ class Tester:
                     bins = np.linspace(-1, 1, num=self._opt.digitize_num)
                     v = (bins * v).sum(-1)
                     a = (bins * a).sum(-1)
-                    merged_preds = np.stack([v.mean(0), a.mean(0)], axis = 1).squeeze()  
-                    self.save_to_file(video_frames_ids, merged_preds, video, task='VA')
-        save_path = 'prediction_test_set.pkl'
-        data = {"outputs":outputs_record, 'estimates':estimates_record, 'frames_ids': frames_ids_record}
-        pickle.dump(data, open(os.path.join(self.save_dir, save_path), 'wb'))  
+                    merged_preds = np.stack([v.mean(0), a.mean(0)], axis = 1).squeeze() 
+                    save_path = '{}/{}/{}.txt'.format( 'merged',task,  video) 
+                    self.save_to_file(video_frames_ids, merged_preds, save_path, task='VA')  
 
-    def save_to_file(self, frames_ids, predictions, video_name, task= 'AU'):
-        save_path = os.path.join(self.save_dir, task)
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        save_path = os.path.join(save_path, video_name+'.txt')
+    def save_to_file(self, frames_ids, predictions, save_path, task= 'AU'):
+        save_path =os.path.join(self.save_dir, save_path)
+        save_dir = os.path.dirname(os.path.abspath(save_path))
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
         categories = PRESET_VARS.Aff_wild2.categories[task]
         assert len(frames_ids) == len(predictions)
         assert frames_ids[-1] == len(frames_ids) - 1
@@ -112,7 +125,12 @@ class Tester:
             f.write(",".join(categories)+"\n")
             for i, line in enumerate(predictions):
                 if isinstance(line, np.ndarray):
-                    digits = [str(int(x)) for x in line]
+                    digits = []
+                    for x in line:
+                        if isinstance(x, float):
+                            digits.append("{:.4f}".format(x))
+                        elif isinstance(x, np.int64):
+                            digits.append(str(x))
                     line = ','.join(digits)+'\n'
                 elif isinstance(line, np.int64):
                     line = str(line)+'\n'
@@ -123,7 +141,7 @@ class Tester:
     def test_one_video(self, data_loader, task = 'AU'):
         track_val = {'outputs':[], 'estimates':[], 'frames_ids':[]}
         for i_val_batch, val_batch in tqdm(enumerate(data_loader), total = len(data_loader)):
-              # evaluate model
+            # evaluate model
             wrapped_v_batch = {task: val_batch}
             self._model.set_input(wrapped_v_batch, input_tasks = [task])
             outputs, _ = self._model.forward(return_estimates=False, input_tasks = [task])
@@ -139,5 +157,5 @@ class Tester:
         return track_val
 if __name__ == "__main__":
     Tester()
-      
             
+

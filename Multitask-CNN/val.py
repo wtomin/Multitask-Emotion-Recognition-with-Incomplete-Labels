@@ -15,8 +15,12 @@ from scipy.stats import mode
 from scipy.special import softmax
 import math
 import pickle
+from sklearn.metrics import precision_recall_curve
 def sigmoid(x):
     return 1/(1+np.exp(-x))
+#################RuntimeError: received 0 items of ancdata ###########################
+torch.multiprocessing.set_sharing_strategy("file_system")
+#########################################################################
 class Tester:
     def __init__(self):
         self._opt = TestOptions().parse()
@@ -39,12 +43,16 @@ class Tester:
         val_start_time = time.time()
         # set model to eval
         self._model.set_eval()
-        model_paths = [self._opt.teacher_model_path]
+        if self._opt.eval_with_teacher:
+            model_paths = [self._opt.teacher_model_path]
+        else:
+            model_paths = []
         if self._opt.ensemble:
             for i in range(self._opt.n_students):
                 path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50.pth'.format(i))
                 assert os.path.exists(path)
                 model_paths.append(path)
+        print("Evaluation: {} models".format(len(model_paths)))
         outputs_record = {}
         estimates_record = {}
         metrics_record = {}
@@ -68,8 +76,8 @@ class Tester:
                     track_val['outputs'].append(outputs[task][task])
                     track_val['labels'].append(wrapped_v_batch[task]['label'])
                     track_val['estimates'].append(estimates[task][task])
-                    ##if i_val_batch>10:
-                        #break
+                    # if i_val_batch>10:
+                    #     break
                 # calculate metric
                 for key in track_val.keys():
                     track_val[key] = np.concatenate(track_val[key], axis=0)
@@ -100,7 +108,6 @@ class Tester:
             elif task == 'VA':
                 merged_preds = np.mean(preds, axis=0)
             labels = np.mean(labels,axis=0)
-            #assert labels.shape[0] == merged_preds.shape[0]
             metric_func = self._model.get_metrics_per_task()[task]
             eval_items, eval_res = metric_func(merged_preds.squeeze(), labels.squeeze())
             now_time = time.strftime("%H:%M", time.localtime(val_start_time))
@@ -118,18 +125,35 @@ class Tester:
             labels = np.array(labels)
             #assert labels[0] == labels[1]
             if task == 'AU':
-                merged_preds = (sigmoid(preds)>0.5).astype(np.int)
-                merged_preds = mode(merged_preds, axis=0)[0]
+                merged_preds = sigmoid(preds)
+                best_thresholds_over_models = []
+                for i in range(len(merged_preds)):
+                    f1_optimal_thresholds = []
+                    merged_preds_per_model = merged_preds[i]
+                    for j in range(merged_preds_per_model.shape[1]):
+                        precision, recall, thresholds = precision_recall_curve(labels[i][:, j].astype(np.int),merged_preds[i][:, j])
+                        f1_optimal_thresholds.append(thresholds[np.abs(precision-recall).argmin(0)])
+                    f1_optimal_thresholds = np.array(f1_optimal_thresholds)
+                best_thresholds_over_models.append(f1_optimal_thresholds)
+                best_thresholds_over_models = np.array(best_thresholds_over_models).mean(0)
+                merged_preds = np.mean(merged_preds, axis=0) 
+                merged_preds = merged_preds > (np.ones_like(merged_preds)*best_thresholds_over_models)
+                merged_preds = merged_preds.astype(np.int64)
+                print("The best AU thresholds over models: {}".format(best_thresholds_over_models))
             elif task=='EXPR':
                 merged_preds = softmax(preds, axis=-1).mean(0).argmax(-1).astype(np.int)
             else:
                 N = self._opt.digitize_num
-                v = softmax(preds[:, :, :N], axis=-1)
-                a = softmax(preds[:, :, N:], axis=-1)
+                v = softmax(preds[:, :, :N], axis=-1).argmax(-1)
+                a = softmax(preds[:, :, N:], axis=-1).argmax(-1)
+                v = mode(v, axis=0)[0]
+                a = mode(a, axis=0)[0]
+                v = np.eye(N)[v]
+                a = np.eye(N)[a]
                 bins = np.linspace(-1, 1, num=self._opt.digitize_num)
                 v = (bins * v).sum(-1)
                 a = (bins * a).sum(-1)
-                merged_preds = np.stack([v.mean(0), a.mean(0)], axis = 1)
+                merged_preds = np.stack([v.squeeze(), a.squeeze()], axis = 1)
             labels = np.mean(labels, axis=0)
             metric_func = self._model.get_metrics_per_task()[task]
             eval_items, eval_res = metric_func(merged_preds.squeeze(), labels.squeeze())
