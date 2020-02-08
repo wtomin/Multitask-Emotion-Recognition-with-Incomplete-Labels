@@ -23,6 +23,7 @@ class BaseOptions():
         self._parser.add_argument('--lambda_V', type=float, default= 1., help='weight for valence.')
         self._parser.add_argument('--lambda_A', type=float, default= 1., help='weight for arousal.')
         self._parser.add_argument('--lambda_ccc', type=float, default= 1., help='weight for ccc loss in (CE + lambda_ccc*ccc).')
+        self._parser.add_argument('--lambda_teacher', type=float, default = 0.4, help='weight for distillation loss when the ground truth exists (between 0 to 1)')
         
         self._parser.add_argument('--force_balance', action='store_true', help='force data balanced for training set')
         self._parser.add_argument('--dataset_names', type=str, default = ['Mixed_EXPR','Mixed_AU','Mixed_VA'],nargs="+")
