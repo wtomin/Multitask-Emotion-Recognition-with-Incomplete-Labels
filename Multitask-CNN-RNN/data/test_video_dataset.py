@@ -8,55 +8,43 @@ import pickle
 import pandas as pd
 from PATH import PATH
 PRESET_VARS = PATH()
-
-class dataset_Mixed_EXPR(DatasetBase):
-    def __init__(self, opt, train_mode='Train', transform = None):
-        super(dataset_Mixed_EXPR, self).__init__(opt, train_mode, transform)
-        self._name = 'dataset_Mixed_EXPR'
+import pickle
+class Test_dataset(object):
+    def __init__(self, opt, video_data,  train_mode = 'Test', transform = None):
+        self._name = 'Test_dataset'
         self._train_mode = train_mode
         if transform is not None:
-            self._transform = transform  
+            self._transform = transform 
+        else:
+            self._transform = self._create_transform()
         # read dataset
-        self._read_dataset_paths()
+        self._data = video_data
+        self._read_dataset()
     def __getitem__(self, index):
         assert (index < self._dataset_size)
-        # start_time = time.time()
         image = None
         label = None
         img_path = self._data['path'][index]
-        image = Image.open(img_path).convert('RGB')
+        image = Image.open( img_path).convert('RGB')
         label = self._data['label'][index]
+        frame_id = self._data['frames_ids'][index]
+
+        # transform data
         image = self._transform(image)
         # pack data
         sample = {'image': image,
                   'label': label,
                   'path': img_path,
-                  'index': index 
+                  'index': index,
+                  'frames_ids': frame_id
                   }
-        # print (time.time() - start_time)
         return sample
-    def _read_dataset_paths(self):
-        if not self._train_mode == 'Test':
-            self._data = self._read_path_label(PRESET_VARS.Mixed_EXPR.data_file)
-        else:
-            self._data = self._read_path_label(PRESET_VARS.Aff_wild2.test_data_file)
-        self._ids = np.arange(len(self._data['label'])) 
-        self._dataset_size = len(self._ids)
+        
+    def _read_dataset(self):        
+        self._ids = np.arange(len(self._data['path'])) 
+        self._dataset_size = len(self._ids)   
     def __len__(self):
     	return self._dataset_size
-    def _read_path_label(self, file_path):
-        data = pickle.load(open(file_path, 'rb'))
-        # read frames ids
-        if self._train_mode == 'Train':
-            data = data['Training_Set']
-        elif self._train_mode == 'Validation':
-            data = data['Validation_Set']
-        elif self._train_mode == 'Test':
-            data = data['Test_Set']
-        else:
-            raise ValueError("train mode must be in : Train, Validation, Test")
-        return data
-
     def _create_transform(self):
         if self._train_mode == 'Train':
             img_size = self._opt.image_size
@@ -77,3 +65,4 @@ class dataset_Mixed_EXPR(DatasetBase):
                                                  std=[0.229, 0.224, 0.225]),
                             ]
         self._transform = transforms.Compose(transform_list)
+
