@@ -224,8 +224,14 @@ class AU_Losses(object):
             task_loss = FocalLoss(self.class_num, self._opt.batch_size, activation = 'sigmoid')
         return task_loss
     def get_distillation_loss(self):
-        distillation_loss = nn.L1Loss().cuda()
-        return distillation_loss
+        #distillation_loss = nn.L1Loss().cuda()
+        #return distillation_loss
+        # no longer use the distillation loss, but use the cross entropy loss
+        def bce_with_logits(x, y):
+            y = torch.sigmoid(y)
+            return F.binary_cross_entropy_with_logits(x, y)
+        return bce_with_logits
+            
 
 class EXPR_Losses(object):
     def __init__(self, opt):
