@@ -59,28 +59,28 @@ class Multitask_DatasetDataLoader:
             if (not self._is_train):
                 dataloader = torch.utils.data.DataLoader(
                         self.datasets[task],
-                        batch_size=self._opt.batch_size * len(self._opt.tasks), # the largest batch size for validation
+                        batch_size=self._opt.batch_size,
                         shuffle= self._is_train,
                         num_workers=int(self._num_threds), 
                         drop_last = self._is_train)
             else:
-                if self._opt.force_balance:
-                    from torchsampler.imbalanced_sampler import SamplerFactory
-                    sampler = SamplerFactory.get_by_name(dataset_name, self.datasets[task])
-                    dataloader = torch.utils.data.DataLoader(
-                            self.datasets[task],
-                            sampler = sampler,
-                            shuffle= False,
-                            batch_size = self._opt.batch_size,
-                            num_workers=int(self._num_threds), 
-                            drop_last = self._is_train)
-                else:
-                    dataloader = torch.utils.data.DataLoader(
-                            self.datasets[task],
-                            batch_size=self._opt.batch_size,
-                            shuffle= self._is_train,
-                            num_workers=int(self._num_threds), 
-                            drop_last = self._is_train)
+                # if self._opt.force_balance:
+                #     from torchsampler.imbalanced_sampler import SamplerFactory
+                #     sampler = SamplerFactory.get_by_name(dataset_name, self.datasets[task])
+                #     dataloader = torch.utils.data.DataLoader(
+                #             self.datasets[task],
+                #             sampler = sampler,
+                #             shuffle= False,
+                #             batch_size = self._opt.batch_size,
+                #             num_workers=int(self._num_threds), 
+                #             drop_last = self._is_train)
+                # else:
+                dataloader = torch.utils.data.DataLoader(
+                        self.datasets[task],
+                        batch_size=self._opt.batch_size,
+                        shuffle= self._is_train,
+                        num_workers=int(self._num_threds), 
+                        drop_last = self._is_train)
             self.dataloaders[task] = dataloader
 
     def load_multitask_train_data(self):
