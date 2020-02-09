@@ -5,7 +5,6 @@ from models.models import ModelsFactory
 from collections import OrderedDict
 import os
 import numpy as np
-import torch
 from sklearn.metrics import f1_score
 from PATH import PATH
 import pandas as pd
@@ -13,12 +12,12 @@ from tqdm import tqdm
 from copy import deepcopy
 from scipy.stats import mode
 from scipy.special import softmax
-import math
 import pickle
 from sklearn.metrics import precision_recall_curve
 def sigmoid(x):
     return 1/(1+np.exp(-x))
 #################RuntimeError: received 0 items of ancdata ###########################
+import torch
 torch.multiprocessing.set_sharing_strategy("file_system")
 #########################################################################
 class Tester:
@@ -26,21 +25,19 @@ class Tester:
         self._opt = TestOptions().parse()
         PRESET_VARS = PATH()
         self._model = ModelsFactory.get_by_name(self._opt.model_name, self._opt)
-        val_transforms = self._model.resnet50.backbone.compose_transforms
-        #self.test_dataloaders = dict([(k, CustomDatasetDataLoader(self._opt, self._opt.mode, self.datasets_names[k], transform = val_transforms).load_data()) for k in self._opt.test_tasks_seq])
+        val_transforms = self._model.resnet50_GRU.backbone.backbone.compose_transforms
         self.validation_dataloaders = Multitask_DatasetDataLoader(self._opt, train_mode = self._opt.mode, transform = val_transforms)
         self.validation_dataloaders = self.validation_dataloaders.load_multitask_val_test_data()
         print("{} sets".format(self._opt.mode))
         for task in self._opt.tasks:
             data_loader = self.validation_dataloaders[task]
-            print("{}: {} images".format(task, len(data_loader)*self._opt.batch_size * len(self._opt.tasks)))
+            print("{}: {} images".format(task, len(data_loader)*self._opt.batch_size * len(self._opt.tasks) * self._opt.seq_len))
         if self._opt.mode == 'Validation':
             self._validate()
         else:
             raise ValueError("do not call val.py with test mode.")
         
     def _validate(self):
-        val_start_time = time.time()
         # set model to eval
         self._model.set_eval()
         if self._opt.eval_with_teacher:
@@ -49,7 +46,7 @@ class Tester:
             model_paths = []
         if self._opt.ensemble:
             for i in range(self._opt.n_students):
-                path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50.pth'.format(i))
+                path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50_GRU.pth'.format(i))
                 assert os.path.exists(path)
                 model_paths.append(path)
         print("Evaluation: {} models".format(len(model_paths)))
@@ -58,7 +55,7 @@ class Tester:
         metrics_record = {}
         labels_record = {}
         for i, path in enumerate(model_paths):
-            self._model.resnet50.load_state_dict(torch.load(path))
+            self._model.resnet50_GRU.load_state_dict(torch.load(path))
             outputs_record[i] = {}
             estimates_record[i] = {}
             metrics_record[i] = {}
@@ -70,13 +67,16 @@ class Tester:
                     # evaluate model
                     wrapped_v_batch = {task: val_batch}
                     self._model.set_input(wrapped_v_batch, input_tasks = [task])
+                    torch.cuda.empty_cache()
                     outputs, _ = self._model.forward(return_estimates=False, input_tasks = [task])
                     estimates, _ = self._model.forward(return_estimates=True, input_tasks = [task])
+
                     #store the predictions and labels
-                    track_val['outputs'].append(outputs[task][task])
-                    track_val['labels'].append(wrapped_v_batch[task]['label'])
-                    track_val['estimates'].append(estimates[task][task])
-                    # if i_val_batch>10:
+                    B, N, C = outputs[task][task].shape
+                    track_val['outputs'].append(outputs[task][task].reshape(B*N, C))
+                    track_val['labels'].append(wrapped_v_batch[task]['label'].reshape(B*N, -1).squeeze())
+                    track_val['estimates'].append(estimates[task][task].reshape(B*N, -1).squeeze())
+                    # if i_val_batch> 3:
                     #     break
                 # calculate metric
                 for key in track_val.keys():
@@ -85,7 +85,7 @@ class Tester:
                 labels = track_val['labels']
                 metric_func = self._model.get_metrics_per_task()[task]
                 eval_items, eval_res = metric_func(preds, labels)
-                now_time = time.strftime("%H:%M", time.localtime(val_start_time))
+                now_time = time.strftime("%H:%M", time.localtime(time.time()))
                 output = "Model id {} {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format(i, task, 
                     now_time, eval_items[0], eval_items[1], eval_res)
                 print(output)
@@ -108,13 +108,14 @@ class Tester:
             elif task == 'VA':
                 merged_preds = np.mean(preds, axis=0)
             labels = np.mean(labels,axis=0)
+            #assert labels.shape[0] == merged_preds.shape[0]
             metric_func = self._model.get_metrics_per_task()[task]
             eval_items, eval_res = metric_func(merged_preds.squeeze(), labels.squeeze())
-            now_time = time.strftime("%H:%M", time.localtime(val_start_time))
+            now_time = time.strftime("%H:%M", time.localtime(time.time()))
             output = "Merged First method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format( task, 
                 now_time, eval_items[0], eval_items[1], eval_res)
             print(output)
-        # one choice, average the raw outputs, this one is better than the first one
+        # one choice, average the raw outputs
         for task in self._opt.tasks:
             preds = []
             labels = []
@@ -157,7 +158,7 @@ class Tester:
             labels = np.mean(labels, axis=0)
             metric_func = self._model.get_metrics_per_task()[task]
             eval_items, eval_res = metric_func(merged_preds.squeeze(), labels.squeeze())
-            now_time = time.strftime("%H:%M", time.localtime(val_start_time))
+            now_time = time.strftime("%H:%M", time.localtime(time.time()))
             output = "Merged Second method {} Validation {}: Eval_0 {:.4f} Eval_1 {:.4f} eval_res {:.4f}".format(task, 
                 now_time, eval_items[0], eval_items[1], eval_res)
             print(output)

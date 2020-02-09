@@ -5,7 +5,6 @@ from models.models import ModelsFactory
 from collections import OrderedDict
 import os
 import numpy as np
-import torch
 from sklearn.metrics import f1_score
 from PATH import PATH
 import pandas as pd
@@ -14,10 +13,12 @@ from copy import deepcopy
 from scipy.stats import mode
 from scipy.special import softmax
 import pickle
+from sklearn.metrics import precision_recall_curve
 def sigmoid(x):
     return 1/(1+np.exp(-x))
 PRESET_VARS = PATH()
 #################RuntimeError: received 0 items of ancdata ###########################
+import torch
 torch.multiprocessing.set_sharing_strategy("file_system")
 #########################################################################
 class Tester:
@@ -35,21 +36,18 @@ class Tester:
             raise ValueError("do not call test.py with validation mode.")
     def _test(self):
         self._model.set_eval()
-        val_transforms = self._model.resnet50.backbone.compose_transforms
-        if self._opt.eval_with_teacher:
-            model_paths = [self._opt.teacher_model_path]
-        else:
-            model_paths = []
+        val_transforms = self._model.resnet50_GRU.backbone.backbone.compose_transforms
+        model_paths = [self._opt.teacher_model_path]
         if self._opt.ensemble:
             for i in range(self._opt.n_students):
-                path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50.pth'.format(i))
+                path = os.path.join(self._opt.checkpoints_dir, self._opt.name, 'net_epoch_student_{}_id_resnet50_GRU.pth'.format(i))
                 assert os.path.exists(path)
                 model_paths.append(path)
         outputs_record = {}
         estimates_record = {}
         frames_ids_record = {}
         for i, path in enumerate(model_paths):
-            self._model.resnet50.load_state_dict(torch.load(path))        
+            self._model.resnet50_GRU.load_state_dict(torch.load(path))        
             outputs_record[i] = {}
             estimates_record[i] = {}
             frames_ids_record[i] = {}
@@ -110,7 +108,7 @@ class Tester:
                     v = (bins * v).sum(-1)
                     a = (bins * a).sum(-1)
                     merged_preds = np.stack([v.mean(0), a.mean(0)], axis = 1).squeeze() 
-                    save_path = '{}/{}/{}.txt'.format( 'merged',task,  video) 
+                    save_path = '{}/{}/{}.txt'.format( 'merged',task, video) 
                     self.save_to_file(video_frames_ids, merged_preds, save_path, task='VA')  
 
     def save_to_file(self, frames_ids, predictions, save_path, task= 'AU'):
@@ -119,8 +117,12 @@ class Tester:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         categories = PRESET_VARS.Aff_wild2.categories[task]
+        #filtered out repeated frames
+        mask = np.zeros_like(frames_ids, dtype=bool)
+        mask[np.unique(frames_ids, return_index=True)[1]] = True
+        frames_ids = frames_ids[mask]
+        predictions = predictions[mask]
         assert len(frames_ids) == len(predictions)
-        assert frames_ids[-1] == len(frames_ids) - 1
         with open(save_path, 'w') as f:
             f.write(",".join(categories)+"\n")
             for i, line in enumerate(predictions):
@@ -147,15 +149,15 @@ class Tester:
             outputs, _ = self._model.forward(return_estimates=False, input_tasks = [task])
             estimates, _ = self._model.forward(return_estimates=True, input_tasks = [task])
             #store the predictions and labels
-            track_val['outputs'].append(outputs[task][task])
-            track_val['frames_ids'].append(np.array(val_batch['frames_ids']))
-            track_val['estimates'].append(estimates[task][task])
+            B, N, C = outputs[task][task].shape
+            track_val['outputs'].append(outputs[task][task].reshape(B*N, C))
+            track_val['frames_ids'].append(np.array([np.array(x) for x in val_batch['frames_ids']]).reshape(B*N, -1).squeeze())
+            track_val['estimates'].append(estimates[task][task].reshape(B*N, -1).squeeze())
              
         for key in track_val.keys():
             track_val[key] = np.concatenate(track_val[key], axis=0)
-        assert len(track_val['frames_ids']) -1 == track_val['frames_ids'][-1]
+        #assert len(track_val['frames_ids']) -1 == track_val['frames_ids'][-1]
         return track_val
 if __name__ == "__main__":
     Tester()
             
-

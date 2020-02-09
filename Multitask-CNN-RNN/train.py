@@ -11,7 +11,6 @@ from copy import deepcopy
 import pandas as pd
 from tqdm import tqdm
 import pickle
-from copy import deepcopy
 from utils.logging_utils import save_plots
 #################RuntimeError: received 0 items of ancdata ###########################
 import torch
@@ -20,10 +19,11 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 class Trainer:
     def __init__(self):
         self._opt = TrainOptions().parse()
+
         PRESET_VARS = PATH(self._opt)
         self._model = ModelsFactory.get_by_name(self._opt.model_name, self._opt)
-        train_transforms = self._model.resnet50.backbone.augment_transforms
-        val_transforms = self._model.resnet50.backbone.compose_transforms
+        train_transforms = self._model.resnet50_GRU.backbone.backbone.augment_transforms
+        val_transforms = self._model.resnet50_GRU.backbone.backbone.compose_transforms
         self.training_dataloaders = Multitask_DatasetDataLoader(self._opt, train_mode = 'Train', transform = train_transforms)
         self.training_dataloaders = self.training_dataloaders.load_multitask_train_data()
         self.validation_dataloaders = Multitask_DatasetDataLoader(self._opt, train_mode = 'Validation', transform = val_transforms)
@@ -31,11 +31,12 @@ class Trainer:
         print("Traning Tasks:{}".format(self._opt.tasks))
         actual_bs = self._opt.batch_size* len(self._opt.tasks)
         print("The actual batch size is {}*{}={}".format(self._opt.batch_size, len(self._opt.tasks), actual_bs))
-        print("Training sets: {} images ({} images per task)".format(len(self.training_dataloaders) * actual_bs, len(self.training_dataloaders)* self._opt.batch_size))
+        print("Training sets: {} images ({} images per task)".format(len(self.training_dataloaders) * actual_bs *self._opt.seq_len, 
+            len(self.training_dataloaders)* self._opt.batch_size*self._opt.seq_len))
         print("Validation sets")
         for task in self._opt.tasks:
             data_loader = self.validation_dataloaders[task]
-            print("{}: {} images".format(task, len(data_loader)*self._opt.batch_size * len(self._opt.tasks)))
+            print("{}: {} images".format(task, len(data_loader)*self._opt.batch_size *self._opt.seq_len))
         self.visual_dict = {'training': pd.DataFrame(), 'validation': pd.DataFrame()}
         self._train()
     def _train(self):
@@ -65,7 +66,7 @@ class Trainer:
                       (i_epoch, self._opt.teacher_nepochs , time_epoch,
                        time_epoch / 60, time_epoch / 3600))
         else:
-            self._model.resnet50.load_state_dict(torch.load(self._opt.pretrained_teacher_model))
+            self._model.resnet50_GRU.load_state_dict(torch.load(self._opt.pretrained_teacher_model))
         # record the teacher_model
         self._teacher_model = deepcopy(self._model)
         del self._model
@@ -93,11 +94,7 @@ class Trainer:
                 print('End of epoch %d / %d \t Time Taken: %d sec (%d min or %d h)' %
                       (i_epoch, self._opt.student_nepochs , time_epoch,
                        time_epoch / 60, time_epoch / 3600))
-            # # update learning rate
-            # if self._opt.lr_policy != 'plateau':
-            #     self._model._LR_scheduler.step()
-            # else:
-            #     self._model._LR_scheduler.step(val_acc)
+
     def _train_epoch(self, i_epoch):
         epoch_iter = 0
         self._model.set_train()
@@ -220,8 +217,9 @@ class Trainer:
             # calculate metric
             preds = np.concatenate(track_val_preds['preds'], axis=0)
             labels = np.concatenate(track_val_labels['labels'], axis=0)
+            B, N = preds.shape[:2]
             metric_func = self._model.get_metrics_per_task()[task]
-            eval_items, eval_res = metric_func(preds, labels)
+            eval_items, eval_res = metric_func(preds.reshape(B*N, -1).squeeze(), labels.reshape(B*N, -1).squeeze())
             now_time = time.strftime("%H:%M", time.localtime(val_start_time))
             output = "{} Validation {}: Epoch [{}] Step [{}] loss {:.4f} Eval_0 {:.4f} Eval_1 {:.4f}".format(task, 
                 now_time, i_epoch, self._total_steps, val_errors['loss'], eval_items[0], eval_items[1])
