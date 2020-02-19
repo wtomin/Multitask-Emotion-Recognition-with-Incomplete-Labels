@@ -90,8 +90,7 @@ class Tester:
                 video_frames_ids = frames_ids_record[0][task][video] 
                 if task == 'AU_Set':
                     merged_preds = sigmoid(preds)
-                    best_thresholds_over_models = [0.1448537,  0.03918985, 0.13766725, 0.02652811, 0.40589422, 0.15572545,
-     0.04808964, 0.10848708]
+                    best_thresholds_over_models = [] # fill in using the results obtained from val.py
                     print("The best AU thresholds over models: {}".format(best_thresholds_over_models))
                     merged_preds = np.mean(merged_preds, axis=0) 
                     merged_preds = merged_preds > (np.ones_like(merged_preds)*best_thresholds_over_models)
