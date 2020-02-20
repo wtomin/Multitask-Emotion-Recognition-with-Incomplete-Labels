@@ -18,7 +18,7 @@ class BaseOptions():
         self._parser.add_argument('--AU_criterion', type=str, default = 'BCE', choices = ['FocalLoss', 'BCE'])
         self._parser.add_argument('--EXPR_criterion', type=str, default = 'CE', choices = ['FocalLoss', 'CE'])
         self._parser.add_argument('--VA_criterion', type=str, default = 'CCC_CE', choices = ['CCC', 'CCC_CE', 'CCC_FocalLoss'])
-        self._parser.add_argument('--lambda_AU', type=float, default= 1., help='weight for AU.')
+        self._parser.add_argument('--lambda_AU', type=float, default= 8., help='weight for AU.')
         self._parser.add_argument('--lambda_EXPR', type=float, default= 1., help='weight for EXPR.')
         self._parser.add_argument('--lambda_V', type=float, default= 1., help='weight for valence.')
         self._parser.add_argument('--lambda_A', type=float, default= 1., help='weight for arousal.')
@@ -42,7 +42,7 @@ class BaseOptions():
         self._parser.add_argument('--pretrained_dataset', type=str, default='ferplus',
                                   choices = ['ferplus', 'sfew','imagenet'], 
                                   help="the pretrained_dataset of the face feature extractor, choices:['ferplus', 'sfew','imagenet']")
-        self._parser.add_argument('--pretrained_teacher_model', type=str, default='/media/Samsung/Aff-wild2-Challenge/exps/multitask_single_image/Teacher_Model/checkpoints/image_size_112_lambda_AU_8_step_decay_3_adam/net_epoch_0_id_resnet50.pth')
+        self._parser.add_argument('--pretrained_teacher_model', type=str, default='')
 
         self._initialized = True
 
