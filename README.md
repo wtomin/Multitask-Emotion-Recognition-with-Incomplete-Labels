@@ -57,3 +57,6 @@ Modify this line `best_thresholds_over_models = [] ` in the `test.py` to the bes
 
 7. Testing: run `python test.py --name image_size_112_n_students_5 --image_size 112 --seq_len 32 --teacher_model_path path-to-teacher-model --mode Test --save_dir Predictions --ensemble` for Multitask-CNN, and run `python test.py --name image_size_112_n_students_5_seq_len=32 --image_size 112 --teacher_model_path path-to-teacher-model --pretrained_resnet50_model path-to-the-pretrained-Multitask-CNN-model  --mode Test --ensemble --seq_len 32` for Multitask-CNN-RNN.
 
+---
+## How to implement our model on your data
+
