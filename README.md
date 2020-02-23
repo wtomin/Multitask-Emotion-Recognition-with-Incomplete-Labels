@@ -14,15 +14,15 @@ Before training, we change the data distribution of experiment datasets by (1) i
 
 This the data disribution of the Aff-wild2 dataset, the DISFA dataset and the merged dataset. We resampled the merged dataset using ML-ROS, which is short for [Multilabel Randomly Oversampling](https://www.sciencedirect.com/science/article/pii/S0925231215004269)
 
-<img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/comparison_AU_distribution.png" width="500">
+<img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/AU_distribution.png" width="500">
 
 This the data distribution of the Aff-wild2 dataset, the ExpW dataset and the merged dataset. We resample the merged dataset to ensure the instances of each class have the same probability of appearing in one epoch.
 
-<img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/comparison_EXPR_distribution.png" width="500">
+<img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/EXPR_distribution.png" width="500">
 
 This the data distribution of the Aff-wild2 dataset, the AFEW-VA dataset and the merged dataset. We discretize the continuous valence/arousal scores in [-1, 1] into 20 bins of the same width. We treat each bin as a category, and apply the oversampling/undersampling strategy.
 
-<img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/comparison_VA_distribution.png" width="500">
+<img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/VA_distribution.png" width="500">
 
 ## Learning With Partial Labels
 
