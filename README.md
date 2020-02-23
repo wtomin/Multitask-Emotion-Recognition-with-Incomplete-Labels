@@ -1,7 +1,7 @@
 # A-Multitask-Solution-for-FAU-EXPR-VA
 This is the repository containing the solution for FG-2020 ABAW Competition
 
-Pretrained models can be downloaded though this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/EnX91m9VSHlFobaIag82W_8B3YRkir97H1QmiUlkZu1zAw?e=LGgDNE)
+Pretrained models can be downloaded through this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/EnX91m9VSHlFobaIag82W_8B3YRkir97H1QmiUlkZu1zAw?e=LGgDNE)
 
 The paper link: [Arxiv Paper](https://arxiv.org/abs/2002.03557)
 
@@ -57,7 +57,7 @@ For Multitask-CNN-RNN, run `python train.py --name image_size_112_n_students_5_s
 6. From the results on the validation set, we obtain the best AU thresholds on the validation set.  
 Modify this line `best_thresholds_over_models = [] ` in the `test.py` to the best thresholds on the validation set.
 
-7. Testing: run `python test.py --name image_size_112_n_students_5 --image_size 112 --seq_len 32 --teacher_model_path path-to-teacher-model --mode Test --save_dir Predictions --ensemble` for Multitask-CNN, and run `python test.py --name image_size_112_n_students_5_seq_len=32 --image_size 112 --teacher_model_path path-to-teacher-model --pretrained_resnet50_model path-to-the-pretrained-Multitask-CNN-model  --mode Test --ensemble --seq_len 32` for Multitask-CNN-RNN.
+7. Testing: run `python test.py --name image_size_112_n_students_5 --image_size 112 --teacher_model_path path-to-teacher-model --mode Test --save_dir Predictions --ensemble` for Multitask-CNN, and run `python test.py --name image_size_112_n_students_5_seq_len=32 --image_size 112 --teacher_model_path path-to-teacher-model --pretrained_resnet50_model path-to-the-pretrained-Multitask-CNN-model  --mode Test --ensemble --seq_len 32` for Multitask-CNN-RNN.
 
 ---
 ## How to implement our model on your data
