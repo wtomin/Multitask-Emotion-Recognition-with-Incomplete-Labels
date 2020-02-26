@@ -65,7 +65,5 @@ Modify this line `best_thresholds_over_models = [] ` in the `test.py` to the bes
 
 2. Crop and align face images, save them to a directory.
 
-3. For CNN model: `python run_pretrained_model.py --image_dir directory-containing-sequence-of-face-images --model_type CNN --batch_size 12 --eval_with_teacher --eval_with_students  --save_dir save-directory --workers 8 --ensemble`
-
-For CNN-RNN model: `python run_pretrained_model.py --image_dir directory-containing-sequence-of-face-images --model_type CNN-RNN --seq_len 32 --batch_size 6 --eval_with_teacher --eval_with_students  --save_dir save-directory --workers 8 --ensemble`
+3. For CNN model: `python run_pretrained_model.py --image_dir directory-containing-sequence-of-face-images --model_type CNN --batch_size 12 --eval_with_teacher --eval_with_students  --save_dir save-directory --workers 8 --ensemble`. For CNN-RNN model: `python run_pretrained_model.py --image_dir directory-containing-sequence-of-face-images --model_type CNN-RNN --seq_len 32 --batch_size 6 --eval_with_teacher --eval_with_students  --save_dir save-directory --workers 8 --ensemble`
 
