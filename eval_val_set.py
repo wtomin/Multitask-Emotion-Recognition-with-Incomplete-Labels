@@ -4,6 +4,7 @@ from sklearn.metrics import f1_score
 import  numpy as np
 from tqdm import tqdm
 import glob
+# this script is used to evalute the pretrained models on the Aff-wild2 validation set
 AU_list = ['AU1','AU2','AU4','AU6','AU12','AU15','AU20','AU25']
 all_crop_aligned = '/media/Samsung/Aff-wild2-Challenge/cropped_aligned' # containing subdirectories with video name. Each subdirectory contains a sequence of crop-aligned faces
 annotation_file = '/media/Samsung/Aff-wild2-Challenge/annotations/annotations.pkl' # annotation file created from create_annotation_file/Aff-wild2/create_train_val_annotation_file.py
