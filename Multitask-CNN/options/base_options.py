@@ -9,7 +9,7 @@ class BaseOptions():
 
     def initialize(self):
         self._parser.add_argument('--load_epoch', type=int, default=-1, help='which epoch to load? set to -1 to use latest cached model')
-        self._parser.add_argument('--temperature', type=int, default=1.5, help='temperature in distillation loss')
+        self._parser.add_argument('--temperature', type=float, default=1.5, help='temperature in distillation loss')
         self._parser.add_argument('--AU_label_size', type=int, default = 8, help='# of AUs')
         self._parser.add_argument('--EXPR_label_size', type=int, default = 7, help='# of EXpressions')
         self._parser.add_argument('--VA_label_size', type=int, default = 2, help='# of VA ')
