@@ -11,12 +11,12 @@ from PATH import PATH
 PRESET_VARS = PATH()
 MODEL_DIR = PRESET_VARS.MODEL_DIR
 from copy import deepcopy
-from utils.model_utils import AU_Losses, EXPR_Losses, VA_Losses, BackBone, Head, Model, AU_metric, EXPR_metric, VA_metric
+from utils.model_utils import AU_Losses, EXPR_Losses, VA_Losses, BackBone, Head, GRU_Head, Seq_Model, Model, AU_metric, EXPR_metric, VA_metric
 
 class ResNet50(BaseModel):
     def __init__(self, opt):
         super(ResNet50, self).__init__(opt)
-        self._name = 'ResNet50'
+        self._name = 'ResNet50_GRU'
         self._output_size_per_task = {'AU': self._opt.AU_label_size, 'EXPR': self._opt.EXPR_label_size, 'VA': self._opt.VA_label_size * self._opt.digitize_num}
         self._criterions_per_task = {'AU': self._opt.AU_criterion, 'EXPR': self._opt.EXPR_criterion, 'VA': self._opt.VA_criterion}
         self.lambdas_per_task = {'AU': self._opt.lambda_AU, 'EXPR': self._opt.lambda_EXPR, 'VA': [self._opt.lambda_V, self._opt.lambda_A]}
@@ -44,44 +44,61 @@ class ResNet50(BaseModel):
         output_feature_dim = backbone.output_feature_dim
         classifiers = [Head(output_feature_dim, self._opt.hidden_size, output_sizes[i]) for i in range(len(self._opt.tasks))]
         classifiers = nn.ModuleList(classifiers)
-        self.resnet50 = Model(backbone, classifiers, self._opt.tasks)
+        resnet50 = Model(backbone, classifiers, self._opt.tasks)
+        if len(self._opt.pretrained_resnet50_model) > 0:
+            if os.path.exists(self._opt.pretrained_resnet50_model):
+                resnet50.load_state_dict(torch.load(self._opt.pretrained_resnet50_model))
+                print("resnet50 model loaded from {}".format(self._opt.pretrained_resnet50_model))
+            else:
+                raise ValueError("path {} does not exist".format(self._opt.pretrained_resnet50_model))
+        if self._opt.frozen:
+            for m in resnet50.parameters():
+                m.requires_grad = False
+        # # 
+        # if self._opt.image_size <= 112:
+        #     setattr(resnet50.backbone.model, 'pool1_3x3_s2', nn.Identity()) # replace the maxpooling layer by identity
+        # create GRUs 
+        GRU_classifiers = [GRU_Head(self._opt.hidden_size, self._opt.hidden_size//2, output_sizes[i]) for i in range(len(self._opt.tasks))]
+        GRU_classifiers = nn.ModuleList(GRU_classifiers)
+        self.resnet50_GRU = Seq_Model(resnet50, GRU_classifiers, self._opt.tasks)
         if len(self._gpu_ids) > 1:
-            self.resnet50 = torch.nn.DataParallel(self.resnet50, device_ids=self._gpu_ids)
-        self.resnet50.cuda()
+            self.resnet50_GRU = torch.nn.DataParallel(self.resnet50_GRU, device_ids=self._gpu_ids)
+        self.resnet50_GRU.cuda()
     def load(self):
         load_epoch = self._opt.load_epoch
         # load feature extractor
-        self._load_network(self.resnet50, 'resnet50', load_epoch)
+        self._load_network(self.resnet50_GRU, 'resnet50', load_epoch)
         self._load_network(self._optimizer_F, 'F', load_epoch)
 
     def save(self, label):
         """
         save network, the filename is specified with the sofar tasks and iteration
         """
-        self._save_network(self.resnet50,  'resnet50', label)
+        self._save_network(self.resnet50_GRU,  'resnet50_GRU', label)
         # save optimizers
         self._save_optimizer(self._optimizer_F, 'F', label)
 
     def _init_train_vars(self):
         self._current_lr_F = self._opt.lr_F # feature extractor
+        params = filter(lambda p: p.requires_grad, self.resnet50_GRU.parameters())
         if self._opt.optimizer == 'Adam':
-            self._optimizer_F = torch.optim.Adam(self.resnet50.parameters(), lr = self._current_lr_F,
+            self._optimizer_F = torch.optim.Adam(params, lr = self._current_lr_F,
                                                     betas = [self._opt.F_adam_b1, self._opt.F_adam_b2])
         elif self._opt.optimizer == 'SGD':
-            self._optimizer_F = torch.optim.SGD(self.resnet50.parameters(), lr = self._current_lr_F)
+            self._optimizer_F = torch.optim.SGD(params, lr = self._current_lr_F)
         self._LR_scheduler = self._get_scheduler(self._optimizer_F, self._opt)
 
     def _format_label_tensor(self, task):
         _Tensor_Long = torch.cuda.LongTensor if self._gpu_ids else torch.LongTensor
         _Tensor_Float = torch.cuda.FloatTensor if self._gpu_ids else torch.FloatTensor
         if task =='AU':
-            return _Tensor_Float(self._opt.batch_size, self._output_size_per_task[task])
+            return _Tensor_Float(self._opt.batch_size, self._opt.seq_len, self._output_size_per_task[task])
         elif task == 'EXPR':
-            return _Tensor_Long(self._opt.batch_size)
+            return _Tensor_Long(self._opt.batch_size, self._opt.seq_len)
         elif task == 'VA':
-            return _Tensor_Float(self._opt.batch_size, self._output_size_per_task[task])
+            return _Tensor_Float(self._opt.batch_size,self._opt.seq_len, self._output_size_per_task[task])
     def _init_prefetch_inputs(self):
-        self._input_image = OrderedDict([(task, self._Tensor(self._opt.batch_size, 3, self._opt.image_size, self._opt.image_size)) for task in self._opt.tasks])  
+        self._input_image = OrderedDict([(task, self._Tensor(self._opt.batch_size, self._opt.seq_len, 3, self._opt.image_size, self._opt.image_size)) for task in self._opt.tasks])  
         self._label = OrderedDict([(task, self._format_label_tensor(task)) for task in self._opt.tasks])
     def _init_losses(self):
         # get the training loss
@@ -105,11 +122,11 @@ class ResNet50(BaseModel):
                 self._input_image[t] = self._input_image[t].cuda(self._gpu_ids[0], async=True)
                 self._label[t] = self._label[t].cuda(self._gpu_ids[0], async=True)
     def set_train(self):
-        self.resnet50.train()
+        self.resnet50_GRU.train()
         self._is_train = True
 
     def set_eval(self):
-        self.resnet50.eval()
+        self.resnet50_GRU.eval()
         self._is_train = False
 
     def forward(self, return_estimates=False, input_tasks = None):
@@ -123,9 +140,10 @@ class ResNet50(BaseModel):
                 with torch.no_grad():
                     input_image = Variable(self._input_image[t])
                     label = Variable(self._label[t])
-                    output = self.resnet50(input_image)
+                    output = self.resnet50_GRU(input_image)
                 criterion_task = self._criterions_per_task[t].get_task_loss()
-                loss_task = criterion_task(output['output'][t], label) 
+                B, N, C  = output['output'][t].size()
+                loss_task = criterion_task(output['output'][t].view(B*N, C), label.view(B*N, -1).squeeze(-1)) 
                 if t != 'VA':
                     val_dict['loss_'+t] = loss_task.item()
                     loss += self.lambdas_per_task[t] * loss_task
@@ -140,7 +158,7 @@ class ResNet50(BaseModel):
                         out_dict[t] = self._format_estimates(output['output'])
                 else:
                     for task in self._opt.tasks:
-                        out_dict[t] = dict([(key,output['output'][key].cpu().numpy()) for key in output['output'].keys()])
+                        out_dict[t] = dict([(key, output['output'][key].cpu().numpy()) for key in output['output'].keys()])
             val_dict['loss'] = loss.item()
         else:
             raise ValueError("Do not call forward function in training mode. USE optimize_parameters() INSTEAD.")
@@ -157,12 +175,12 @@ class ResNet50(BaseModel):
                 estimates['EXPR'] = o.numpy()
             elif task == 'VA':
                 N = self._opt.digitize_num
-                v = F.softmax(output['VA'][:, :N].cpu(), dim=-1).numpy()
-                a = F.softmax(output['VA'][:, N:].cpu(), dim=-1).numpy()
+                v = F.softmax(output['VA'][:,:, :N].cpu(), dim=-1).numpy()
+                a = F.softmax(output['VA'][:,:, N:].cpu(), dim=-1).numpy()
                 bins = np.linspace(-1, 1, num=self._opt.digitize_num)
                 v = (bins * v).sum(-1)
                 a = (bins * a).sum(-1)
-                estimates['VA'] = np.stack([v, a], axis = 1)
+                estimates['VA'] = np.stack([v, a], axis = -1)
         return estimates
     def optimize_parameters(self):
         train_dict = dict()
@@ -171,9 +189,11 @@ class ResNet50(BaseModel):
             for t in self._opt.tasks:
                 input_image = Variable(self._input_image[t])
                 label = Variable(self._label[t])
-                output = self.resnet50(input_image)
+                output = self.resnet50_GRU(input_image)
+
                 criterion_task = self._criterions_per_task[t].get_task_loss()
-                loss_task = criterion_task(output['output'][t], label) 
+                B, N, C  = output['output'][t].size()
+                loss_task = criterion_task(output['output'][t].view(B*N, C), label.view(B*N, -1).squeeze(-1)) 
                 if t!= 'VA':
                     train_dict['loss_'+t] = loss_task.item()
                     loss += self.lambdas_per_task[t] * loss_task
@@ -187,6 +207,7 @@ class ResNet50(BaseModel):
             self._optimizer_F.zero_grad()
             loss.backward()
             self._optimizer_F.step()
+
             self.loss_dict = train_dict
         else:
             raise ValueError("Do not call optimize_parameters function in test mode. USE forward() INSTEAD.")
@@ -197,22 +218,25 @@ class ResNet50(BaseModel):
         if self._is_train:
             for t in self._opt.tasks:
                 input_image = Variable(self._input_image[t])
+                output = self.resnet50_GRU(input_image)
                 label = Variable(self._label[t])
-                output = self.resnet50(input_image)
                 with torch.no_grad():
-                    teacher_preds = teacher_model.resnet50(input_image)
+                    teacher_preds = teacher_model.resnet50_GRU(input_image)
                 for task in self._opt.tasks:
                     distillation_task = self._criterions_per_task[task].get_distillation_loss()
-                    loss_task = distillation_task(output['output'][task], teacher_preds['output'][task])
+                    B, N, C  = output['output'][task].size()
+                    loss_task = distillation_task(output['output'][task].view(B*N, C), teacher_preds['output'][task].view(B*N, C))
                     if task == t:
-                        if task !='VA':
+                        if task!= 'VA':
                             criterion_task = self._criterions_per_task[t].get_task_loss()
-                            loss_task = self._opt.lambda_teacher * loss_task + (1 - self._opt.lambda_teacher) * criterion_task(output['output'][t], label) 
+                            B, N, C  = output['output'][t].size()
+                            loss_task = self._opt.lambda_teacher * loss_task + (1 - self._opt.lambda_teacher) * criterion_task(output['output'][t].view(B*N, C), label.view(B*N, -1).squeeze())
+                        
                         else:
                             criterion_task = self._criterions_per_task[t].get_task_loss()
-                            loss_v, loss_a = criterion_task(output['output'][t], label) 
+                            loss_v, loss_a = criterion_task(output['output'][t].view(B*N, C), label.view(B*N, -1).squeeze())
                             loss_task = [self._opt.lambda_teacher * loss_task[0] + (1 - self._opt.lambda_teacher) *loss_v,
-                                        self._opt.lambda_teacher * loss_task[1] + (1 - self._opt.lambda_teacher) *loss_a,]
+                                        self._opt.lambda_teacher * loss_task[1] + (1 - self._opt.lambda_teacher) *loss_a,] 
                     if task!= 'VA':
                         loss_per_task[task] += loss_task.item()
                         loss += loss_task
@@ -232,7 +256,6 @@ class ResNet50(BaseModel):
             self.loss_dict = train_dict
         else:
             raise ValueError("Do not call optimize_parameters function in test mode. USE forward() INSTEAD.")
-
     def get_current_errors(self):
         return self.loss_dict
     def get_metrics_per_task(self):
