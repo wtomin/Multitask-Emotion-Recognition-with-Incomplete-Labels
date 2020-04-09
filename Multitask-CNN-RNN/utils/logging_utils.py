@@ -12,6 +12,9 @@ def draw_plots(df, title, save_path):
 	plt.title(title)
 	plt.xlabel("Iterations")
 	plt.savefig(save_path, bbox_inches='tight')
+	plt.clf()
+	plt.cla()
+
 	
 def save_plots(data_dict, train_save_path, val_save_path):
 	train_df = data_dict['training']
