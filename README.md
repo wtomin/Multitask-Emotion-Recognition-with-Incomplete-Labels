@@ -3,8 +3,8 @@ This is the repository containing the solution for FG-2020 ABAW Competition
 
 Pretrained models can be downloaded through this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/EnX91m9VSHlFobaIag82W_8B3YRkir97H1QmiUlkZu1zAw?e=LGgDNE)
 
-The paper link: [Paper in proceeding](https://www.computer.org/csdl/pds/api/csdl/proceedings/download-article/1kecJ0EYZxK/pdf) [Arxiv Paper](https://arxiv.org/abs/2002.03557)
-
+ [Paper](https://www.computer.org/csdl/pds/api/csdl/proceedings/download-article/1kecJ0EYZxK/pdf),   [Presentation](https://hkustconnect-my.sharepoint.com/:v:/g/personal/ddeng_connect_ust_hk/ETn3jr7KVX1JjJ_MP8Ua8MEBIEP2WcJyyviYApd951qh4g?e=KOkr8Z)
+ 
 We aim for a unifed model to solve three tasks: Facial Action Units (FAU) prediction, Facial Expression (7 basic emotions) prediction, Valence and Arousal prediction. For abbreviation, we refer to them as FAU, EXPR and VA.
 
 *UPDATES*: The challenge [leaderboard](https://ibug.doc.ic.ac.uk/resources/fg-2020-competition-affective-behavior-analysis/) has been released. Our solution won two challenege tracks (FAU and VA) among six teams!
@@ -67,3 +67,14 @@ Modify this line `best_thresholds_over_models = [] ` in the `test.py` to the bes
 
 3. For CNN model: `python run_pretrained_model.py --image_dir directory-containing-sequence-of-face-images --model_type CNN --batch_size 12 --eval_with_teacher --eval_with_students  --save_dir save-directory --workers 8 --ensemble`. For CNN-RNN model: `python run_pretrained_model.py --image_dir directory-containing-sequence-of-face-images --model_type CNN-RNN --seq_len 32 --batch_size 6 --eval_with_teacher --eval_with_students  --save_dir save-directory --workers 8 --ensemble`
 
+---
+## If you are interested in our work, please cite
+```
+@inproceedings{deng2020multitask,
+  title={Multitask Emotion Recognition with Incomplete Labels},
+  author={Deng, Didan and Chen, Zhaokang and Shi, Bertram E},
+  booktitle={2020 15th IEEE International Conference on Automatic Face and Gesture Recognition (FG 2020)(FG)},
+  pages={828--835},
+  organization={IEEE Computer Society}
+}
+```
