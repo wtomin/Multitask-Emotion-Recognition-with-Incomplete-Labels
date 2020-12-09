@@ -556,7 +556,7 @@ def save_to_file(frames_ids, predictions, save_path, task= 'AU'):
             if isinstance(line, np.ndarray):
                 digits = []
                 for x in line:
-                    if isinstance(x, float):
+                    if isinstance(x, float) or isinstance(x, np.float32) or isinstance(x, np.float64):
                         digits.append("{:.4f}".format(x))
                     elif isinstance(x, np.int64):
                         digits.append(str(x))
@@ -613,7 +613,7 @@ def main():
             frames_ids_record[model_id][task] = track[task]['frames_ids']
             save_path = '{}/{}/{}.txt'.format(opt.save_dir, model_id, task)
             save_to_file(track[task]['frames_ids'], track[task]['estimates'], save_path, task=task)
-    #merge the raw outputs 
+    #merge the raw outputs && save them with raw_outputs
     if opt.ensemble and opt.eval_with_students:
         for task in opt.tasks:
             preds = []
@@ -625,17 +625,22 @@ def main():
             video_frames_ids = frames_ids_record[model_id][task]
             if task == 'AU':
                 merged_preds = sigmoid(preds)
+                merged_preds = np.mean(merged_preds, axis=0)
+                save_path = '{}/{}/{}.txt'.format(opt.save_dir, 'merged_raw', task)
+                save_to_file(video_frames_ids, merged_preds, save_path, task='AU')
                 best_thresholds_over_models = Best_AU_Thresholds[opt.model_type]
                 if 'RNN' in opt.model_type:
                     best_thresholds_over_models = best_thresholds_over_models[opt.seq_len]
                 #print("The best AU thresholds over models: {}".format(best_thresholds_over_models))
-                merged_preds = np.mean(merged_preds, axis=0) 
                 merged_preds = merged_preds > (np.ones_like(merged_preds)*best_thresholds_over_models)
                 merged_preds = merged_preds.astype(np.int64)
                 save_path = '{}/{}/{}.txt'.format(opt.save_dir, 'merged', task)
                 save_to_file(video_frames_ids, merged_preds, save_path, task='AU')
             elif task == 'EXPR':
-                merged_preds = softmax(preds, axis=-1).mean(0).argmax(-1).astype(np.int).squeeze()
+                merged_preds = softmax(preds, axis=-1).mean(0)
+                save_path = '{}/{}/{}.txt'.format(opt.save_dir, 'merged_raw', task)
+                save_to_file(video_frames_ids, merged_preds, save_path, task='EXPR')
+                merged_preds = merged_preds.argmax(-1).astype(np.int).squeeze()
                 save_path = '{}/{}/{}.txt'.format(opt.save_dir, 'merged', task)
                 save_to_file(video_frames_ids, merged_preds, save_path, task='EXPR')
             else:
@@ -647,9 +652,12 @@ def main():
                 a = (bins * a).sum(-1)
                 merged_preds = np.stack([v.mean(0), a.mean(0)], axis = 1).squeeze() 
                 save_path = '{}/{}/{}.txt'.format(opt.save_dir, 'merged', task)
-                save_to_file(video_frames_ids, merged_preds, save_path, task='VA')  
+                save_to_file(video_frames_ids, merged_preds, save_path, task='VA') 
+                save_path = '{}/{}/{}.txt'.format(opt.save_dir, 'merged_raw', task)
+                save_to_file(video_frames_ids, merged_preds, save_path, task='VA') 
 
 
 if __name__ == '__main__':
     main()
+
 
