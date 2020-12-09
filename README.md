@@ -12,6 +12,8 @@ We aim for a unifed model to solve three tasks: Facial Action Units (FAU) predic
 *UPDATES*: We made our latest demo available!
 [![Watch the video](https://github.com/wtomin/Multitask-Emotion-Recognition-with-Incomplete-Labels/blob/master/imgs/thumnail.jpg)](https://youtu.be/0-dnW0Rb5_U)
 
+To make such a demo, modify the `video_file` in `emotion_demo.py` and then run `python emotion_demo.py`. The output video will be saved under the `save_dir`.
+
 ---
 ## Data Balancing
 
