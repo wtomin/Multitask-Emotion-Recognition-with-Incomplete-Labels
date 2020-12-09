@@ -15,6 +15,8 @@ We aim for a unifed model to solve three tasks: Facial Action Units (FAU) predic
 
 To make such a demo, modify the `video_file` in `emotion_demo.py` and then run `python emotion_demo.py`. The output video will be saved under the `save_dir`.
 
+To run this demo, [MTCNN](https://github.com/ipazc/mtcnn) must be installed.
+
 ---
 ## Data Balancing
 
