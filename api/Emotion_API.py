@@ -139,7 +139,7 @@ class Emotion_API_Video(object):
             if task == 'AU':
                 best_au_thresholds = Best_AU_Thresholds[self.model_type]
                 if 'RNN' in self.model_type:
-                    best_au_thresholds = best_au_thresholds[self.length]
+                    best_au_thresholds = best_au_thresholds[32] # since the downloaded models have trained with sequence length=32
                 
                 o = torch.sigmoid(output['AU'].cpu())
                 threshold = torch.ones_like(o) * torch.Tensor(best_au_thresholds)
