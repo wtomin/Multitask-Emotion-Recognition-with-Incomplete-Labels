@@ -1,0 +1,40 @@
+# Don't track content of these folders
+api/OpenFace/
+api/pretrained_models/
+api/pytorch-benchmarks
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+*.so
+
+# shell files
+# 
+*.dat
+*.png
+*.pkl
+# checkpoints
+*.pth
+*.t7
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.tar.xz
+*.zip
+*.h5
+
+# tensorboard
+events.out*
