@@ -1,7 +1,7 @@
 # Don't track content of these folders
 api/OpenFace/
 api/pretrained_models/
-api/pytorch-benchmarks
+api/pytorch-benchmarks/
 # Compiled source #
 ###################
 *.com
