@@ -9,7 +9,7 @@ These instructions will get you a copy of the project up and running on your loc
 ## Prerequisites
 My recommendation is to use Anaconda to create an virtual environment. For example:
 ```
-conda create --name myenv --python=3.6
+conda create --name myenv python=3.6
 ```
 
 And then activate the virtual environment by:
@@ -18,12 +18,14 @@ conda activate myenv
 ```
 
 - CUDA
-My recommendation is to used Anaconda to install cudatoolkit 10.1:
+My recommendation is to used Anaconda to install cudatoolkit 10.1, torch and torchvision:
 ```
-conda install cudatoolkit=10.1 -c pytorch 
+conda install pytorch torchvision cudatoolkit=10.1
 ```
 
 - OpenFace
+
+If you have already installed OpenFace, you can skip the installation below. You only need to replace pass the executable file path `FeatureExtraction` to `EmotionAPI()`.
 
 To install OpenFace in the root directory of this project:
 ```
@@ -32,7 +34,7 @@ cd OpenFace
 ```
 Then download the needed models by:
 ```
-bash download_models.sh
+bash ./download_models.sh
 ```
 It's better to install some dependencies required by OpenCV before you run 'install.sh':
 ```
@@ -45,8 +47,9 @@ sudo apt-get install libxvidcore-dev libx264-dev # Install a few libraries used 
 ```
 And then install OpenFace by:
 ```
-bash install.sh
+sudo bash ./install.sh
 ```
+If this shell script fails to install it correctly, you can follow the instruction [here](https://github.com/TadasBaltrusaitis/OpenFace/wiki/Unix-Installation#advanced-ubuntu-installation-if-not-using-installsh-or-if-it-fails).
 
 - pytorch-benchmarks
 Install pytorch-benchmarks in the root directory of your project:
@@ -55,13 +58,13 @@ git clone https://github.com/albanie/pytorch-benchmarks.git
 ```
 Create a directory in pytorch-benchmarks to store the resnet50 model and weights:
 ```
-mkdir pytorch-benchmarks/ferplus/
+mkdir pytorch-benchmarks/models && mkdir pytorch-benchmarks/models/fer+/
 ```
 Then download the resnet50 model and weights by
 ```
-wget -P pytorch-benchmarks/ferplus/ http://www.robots.ox.ac.uk/~albanie/models/pytorch-mcn/resnet50_ferplus_dag.py
+wget -P pytorch-benchmarks/models/fer+/ http://www.robots.ox.ac.uk/~albanie/models/pytorch-mcn/resnet50_ferplus_dag.py
 
-wget -P pytorch-benchmarks/ferplus/ http://www.robots.ox.ac.uk/~albanie/models/pytorch-mcn/resnet50_ferplus_dag.pth 
+wget -P pytorch-benchmarks/models/fer+/ http://www.robots.ox.ac.uk/~albanie/models/pytorch-mcn/resnet50_ferplus_dag.pth 
 ```
 
 - Other requirements

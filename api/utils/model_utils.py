@@ -1,11 +1,14 @@
 import os
 import six
+import random
 import sys
-from ..config import MODEL_DIR
+sys.path.append("..")
+from config import MODEL_DIR
 import torchvision.transforms as transforms
 import torch
-
-
+import torch.nn as nn
+from .data_utils import RandomCrop, RandomHorizontalFlip
+import torch.nn.functional as F
 def compose_transforms(meta, center_crop=True, new_imageSize = None,
                       override_meta_imsize=False):
     """Compose preprocessing transforms for model
@@ -98,7 +101,12 @@ def load_model(model_name, MODEL_DIR):
     func = getattr(mod, model_name)
     net = func(weights_path=weights_path)
     return net
-
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+    def forward(self, x):
+        return x
+        
 class Head(nn.Module):
     def __init__(self, input_dim, hidden_dim, n_class = 8):
         super(Head, self).__init__()
