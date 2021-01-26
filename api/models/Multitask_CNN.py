@@ -1,12 +1,20 @@
 import torch.nn as nn
-from ..config import MODEL_DIR
-from ..utils import Head,Model
+import sys
+sys.path.append("..")
+from config import OPT
+import torch
+from config import MODEL_DIR
+from utils import Head,Model, BackBone
 from torch.autograd import Variable
+import torch.nn.functional as F
+import copy
+import numpy as np
 ################################################## Model: ResNet50 ############################################
 
 class ResNet50():
-    def __init__(self, opt):
-        self._opt = opt
+    def __init__(self, device):
+        self._opt = copy.copy( OPT)
+        self.device = device
         self._name = 'ResNet50'
         self._output_size_per_task = {'AU': self._opt.AU_label_size, 'EXPR': self._opt.EXPR_label_size, 'VA': self._opt.VA_label_size * self._opt.digitize_num}
         # create networks
@@ -22,11 +30,11 @@ class ResNet50():
         classifiers = [Head(output_feature_dim, self._opt.hidden_size, output_sizes[i]) for i in range(len(self._opt.tasks))]
         classifiers = nn.ModuleList(classifiers)
         self.resnet50 = Model(backbone, classifiers, self._opt.tasks)
-        if len(self._opt.gpu_ids) > 1:
-            self.resnet50 = torch.nn.DataParallel(self.resnet50, device_ids=self._opt.gpu_ids)
-        self.resnet50.cuda()
+        self.to_device()
+    def to_device(self):
+        self.resnet50.to(self.device)
     def load(self, model_path):
-        self.resnet50.load_state_dict(torch.load(model_path))  
+        self.resnet50.load_state_dict(torch.load(model_path, map_location=self.device))  
 
     def set_eval(self):
         self.resnet50.eval()
@@ -36,8 +44,7 @@ class ResNet50():
         assert self._is_train is False, "Model must be in eval mode"
         with torch.no_grad():
             input_image = Variable(input_image)
-            if not input_image.is_cuda:
-                input_image = input_image.cuda()
+            input_image = input_image.to(self.device)
             output = self.resnet50(input_image)
             out_dict = self._format_estimates(output['output'])
             out_dict_raw = dict([(key,output['output'][key]) for key in output['output'].keys()])

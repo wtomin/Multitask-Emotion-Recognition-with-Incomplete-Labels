@@ -1,14 +1,16 @@
 import pandas as pd
 from PIL import Image
 import numpy as np
-class Image_dataset(object):
+import os
+import glob
+class Image_Dataset(object):
     def __init__(self, 
         image_dir, 
         transform = None,
         image_ext = ['.jpg', '.bmp', '.png']):
-        self._opt = opt
         assert transform is not None
         self._transform = transform
+        self.image_dir = image_dir
         self.image_ext = image_ext
         # read dataset
         self._read_dataset()
@@ -33,8 +35,8 @@ class Image_dataset(object):
         #sample them 
         frames_paths = glob.glob(os.path.join(self.image_dir, '*'))
         frames_paths = [x for x in frames_paths if any([ext in x for ext in self.image_ext])]
-        frames_paths = sorted(frames_paths)
-        self._data = {'path': frames_paths, 'frames_ids': np.arange(len(frames_paths))} # dataframe are easier for indexing
+        frames_paths = sorted(frames_paths, key=lambda x: int(os.path.basename(x).split('.')[0].split('_')[-1]))
+        self._data = {'path': frames_paths, 'frames_ids': [int(os.path.basename(p).split('.')[0].split('_')[-1]) for p in frames_paths]} # dataframe are easier for indexing
         self._ids = np.arange(len(self._data['path'])) 
         self._dataset_size = len(self._ids) 
 

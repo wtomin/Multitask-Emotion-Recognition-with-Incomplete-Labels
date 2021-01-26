@@ -1,12 +1,20 @@
 import torch.nn as nn
-from ..config import MODEL_DIR
-from ..utils import Head, GRU_Head, Seq_Model
+import torch
+import sys
+sys.path.append("..")
+from config import OPT
+from config import MODEL_DIR
+from utils import Head, GRU_Head, Seq_Model, BackBone,Model
 from torch.autograd import Variable
+import torch.nn.functional as F
+import copy
+import numpy as np
 ############################################ CNN-RNN ########################################33
 
 class ResNet50_GRU():
-    def __init__(self, opt):
-        self._opt = opt
+    def __init__(self, device):
+        self._opt = copy.copy( OPT)
+        self.device = device
         self._name = 'ResNet50_GRU'
         self._output_size_per_task = {'AU': self._opt.AU_label_size, 'EXPR': self._opt.EXPR_label_size, 'VA': self._opt.VA_label_size * self._opt.digitize_num}
         # create networks
@@ -25,11 +33,11 @@ class ResNet50_GRU():
         GRU_classifiers = [GRU_Head(self._opt.hidden_size, self._opt.hidden_size//2, output_sizes[i]) for i in range(len(self._opt.tasks))]
         GRU_classifiers = nn.ModuleList(GRU_classifiers)
         self.resnet50_GRU = Seq_Model(resnet50, GRU_classifiers, self._opt.tasks)
-        # if len(self._opt.gpu_ids) > 1:
-        #     self.resnet50_GRU = torch.nn.DataParallel(self.resnet50_GRU, device_ids=self._opt.gpu_ids)
-        self.resnet50_GRU.cuda()
+        self.to_device()
+    def to_device(self):
+        self.resnet50_GRU.to(self.device)
     def load(self, model_path):
-        self.resnet50_GRU.load_state_dict(torch.load(model_path))  
+        self.resnet50_GRU.load_state_dict(torch.load(model_path, map_location=self.device))  
     def set_eval(self):
         self.resnet50_GRU.eval()
         self._is_train = False
@@ -38,8 +46,7 @@ class ResNet50_GRU():
         assert self._is_train is False, "Model must be in eval mode"
         with torch.no_grad():
             input_image = Variable(input_image)
-            if not input_image.is_cuda:
-                input_image = input_image.cuda()
+            input_image = input_image.to(self.device)
             output = self.resnet50_GRU(input_image)
             out_dict = self._format_estimates(output['output'])
             out_dict_raw = dict([(key, output['output'][key]) for key in output['output'].keys()])
