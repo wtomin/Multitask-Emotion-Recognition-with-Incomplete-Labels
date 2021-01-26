@@ -91,4 +91,5 @@ python run_example.py
 ```
 The prediction results will be saved to `predictions.csv`.  
 
-In addition, if you pass `video=True` to `API`, a video will be generated where three types of emotion predictions are drawn as plots.
+# TODO
+- To generate a video will where three types of emotion predictions are drawn.
