@@ -89,7 +89,20 @@ Run
 ```
 python run_example.py
 ```
-The prediction results will be saved to `predictions.csv`.  
+The prediction results will be saved to `predictions.csv`. 
+
+Example:
+```
+   frames_ids  AU1  AU2  AU4  AU6  ...  AU20  AU25  EXPR   valence   arousal
+0           1    0    0    1    1  ...     0     0     4  0.499485  0.522120
+1           2    0    0    1    1  ...     0     0     4  0.488518  0.504697
+2           3    0    0    1    1  ...     0     0     4  0.445970  0.469693
+3           4    0    0    1    1  ...     0     0     4  0.421242  0.448395
+4           5    0    0    1    1  ...     0     0     4  0.430781  0.450103
+
+[5 rows x 12 columns]
+
+``` 
 
 # TODO
 - To generate a video will where three types of emotion predictions are drawn.
