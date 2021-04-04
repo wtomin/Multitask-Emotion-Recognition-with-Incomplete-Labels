@@ -15,5 +15,5 @@ api = Emotion_API(
 	#The image sampler will sample some frames repeatedly to meet the length requirement, which can take longer.
 	#If the video length is smaller than 32 and you want to save time, you can change the length to the video length.
 	batch_size = 24, # The input tensor is (Batch_size, 3, 112, 112) for non-temporal model and (Batch_size, length, 3, 112, 112) for temporal model.
-
+        )
 api.run(example_video, csv_output='examples/multitask_preds.csv')
