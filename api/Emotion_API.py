@@ -50,6 +50,49 @@ class Emotion_API(object):
         self.ensemble, self.val_transforms = ModelFactory.get(self.device, self.model_type, num_students)
         self.save_csv = save_csv
         self.emotion_annotated_video = emotion_annotated_video
+    def run_face_images(self, face_dir, csv_output=None):
+        # face_dir is a directory containing a sequence of cropped and aligned face images
+        assert len(os.listdir(face_dir))>0, "{} is empty".format(face_dir)
+        if self.model_type == 'CNN_RNN':
+            dataset = Seq_Dataset(face_dir, 
+                seq_len=self.length, transform = self.val_transforms)
+            total_frames = len(dataset) * self.length
+        else:
+            dataset = Image_Dataset(face_dir,
+                transform = self.val_transforms)
+            total_frames = len(dataset) 
+        
+        assert total_frames> self.min_frames,"The minimum number of frames should be {}".format(self.min_frames)
+        dataloader =  torch.utils.data.DataLoader(
+                        dataset,
+                        batch_size=self.batch_size,
+                        shuffle= False,
+                        num_workers=self.num_workers,
+                        drop_last=False)
+
+        
+        ensemble_estimates = self.test_ensemble(dataloader)
+        if self.save_csv:
+            if csv_output is None:
+                csv_output = os.path.join(os.path.dirname(video_file), '{}.csv'.format(video_name))
+            
+            self.save_preds_to_file(ensemble_estimates, csv_output)
+    def run_raw_images(self, images_dir, csv_output=None):
+        # images_dir is a directory containing a sequence of video frames. Each frame may contain faces.
+        assert len(os.listdir(images_dir))>0, "The images_dir is empty!"
+
+        opface_output_dir = os.path.join(os.path.dirname(images_dir), 
+                os.path.basename(images_dir)+"_opface")
+        assert not os.path.exists(opface_output_dir), "{} exists before OpenFace is extracting".format(opface_output_dir)
+        self.video_processor.process(images_dir, opface_output_dir)
+        assert len(os.listdir(opface_output_dir)) >0 , "The OpenFace output directory should not be empty: {}".format(opface_output_dir)
+        aligned_face_dir = os.path.join(opface_output_dir, '{}_aligned'.format(os.path.basename(images_dir)))
+        if os.path.exists(aligned_face_dir):
+            self.run_face_images(aligned_face_dir, csv_output)
+        else:
+            self.run_face_images(opface_output_dir, csv_output)
+        
+
     def run(self, video_file , csv_output = None):
         video_cap = cv2.VideoCapture(video_file)
         video_name = os.path.basename(video_file).split('.')[0]
@@ -195,4 +238,5 @@ class Emotion_API(object):
                 a = (bins * a).sum(-1)
                 estimates['VA'] = np.stack([v, a], axis = 1)
         return estimates
+
 
