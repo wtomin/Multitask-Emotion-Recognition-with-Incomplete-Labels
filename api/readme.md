@@ -52,20 +52,11 @@ sudo bash ./install.sh
 If this shell script fails to install it correctly, you can follow the instruction [here](https://github.com/TadasBaltrusaitis/OpenFace/wiki/Unix-Installation#advanced-ubuntu-installation-if-not-using-installsh-or-if-it-fails).
 
 - pytorch-benchmarks
-Install pytorch-benchmarks in the root directory of your project:
+Download pytorch-benchmarks in the root directory of your project:
 ```
 git clone https://github.com/albanie/pytorch-benchmarks.git
 ```
-Create a directory in pytorch-benchmarks to store the resnet50 model and weights:
-```
-mkdir pytorch-benchmarks/models && mkdir pytorch-benchmarks/models/fer+/
-```
-Then download the resnet50 model and weights by
-```
-wget -P pytorch-benchmarks/models/fer+/ http://www.robots.ox.ac.uk/~albanie/models/pytorch-mcn/resnet50_ferplus_dag.py
-
-wget -P pytorch-benchmarks/models/fer+/ http://www.robots.ox.ac.uk/~albanie/models/pytorch-mcn/resnet50_ferplus_dag.pth 
-```
+Download the three folders in this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/ElE4ifQSxLBCgtfQLvgE5Z8B8wGo-SpoUJc-So_3FruMcg?e=LL3u6V) and save the three folders under `pytorch-benchmarks/models`.
 
 - Other requirements
 
@@ -79,7 +70,7 @@ pip install -r requirements.txt
 Download pretrained Multitask CNN models and Multitask CNN-RNN models by:
 
 ```
-bash download_models.sh
+bash download_pretrained_weights_aff_wild2.sh
 ```
 
 # How to use
