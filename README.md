@@ -1,7 +1,7 @@
 # Multitask-Emotion-Recognition-with-Incomplete-Labels
 This is the repository containing the solution for FG-2020 ABAW Competition
 
-Pretrained models can be downloaded through this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/EnX91m9VSHlFobaIag82W_8B3YRkir97H1QmiUlkZu1zAw?e=LGgDNE)
+Pretrained models can be downloaded through this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/EnX91m9VSHlFobaIag82W_8B3YRkir97H1QmiUlkZu1zAw?e=LGgDNE) under the `Multitask-CNN` and `Multitask-CNN-RNN` folders.
 
  [Paper](https://www.computer.org/csdl/pds/api/csdl/proceedings/download-article/1kecJ0EYZxK/pdf),   [Presentation](https://hkustconnect-my.sharepoint.com/:v:/g/personal/ddeng_connect_ust_hk/ETn3jr7KVX1JjJ_MP8Ua8MEBIEP2WcJyyviYApd951qh4g?e=KOkr8Z)
  
@@ -13,9 +13,7 @@ We aim for a unifed model to solve three tasks: Facial Action Units (FAU) predic
 ## DEMO: We made our latest demo available!
 [![Watch the video](https://github.com/wtomin/Multitask-Emotion-Recognition-with-Incomplete-Labels/blob/master/imgs/thumnail.jpg)](https://youtu.be/0-dnW0Rb5_U)
 
-To make such a demo, modify the `video_file` in `emotion_demo.py` and then run `python emotion_demo.py`. The output video will be saved under the `save_dir`.
-
-To run this demo, [MTCNN](https://github.com/ipazc/mtcnn) must be installed.
+To run such a demo, make sure you have installed the requirements listed in [Requirements](#requirements) in addition to [MTCNN](https://github.com/ipazc/mtcnn) and downloaded all pretrained weights. Afterwards, you can modify the `video_file` in `emotion_demo.py` to the video you want to process, and then run `python emotion_demo.py`. The output video will be saved under the `save_dir`.
 
 ---
 ## Data Balancing
@@ -44,11 +42,22 @@ This is the diagram for our proposed algorithm. Given the input images of three 
 <img src="https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA/blob/master/imgs/algorithm.png" width="700">
 
 ---
-## Requiremnets
+## Requirements
 * Pytorch 1.3.1 or higher version
 * Numpy
 * [pytorch benchmark](https://github.com/albanie/pytorch-benchmarks)
 * pandas, pickle, matplotlib 
+
+## Pretrained Weights
+
+Before training our models on the Aff-wild2 dataset, we loaded the pretrained weights on other emotion datasets, such as FER2013 dataset. This is part of [pytorch benchmark](https://github.com/albanie/pytorch-benchmarks) repository but you need to download them manually. To download these pretrained weights, we provide this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/ElE4ifQSxLBCgtfQLvgE5Z8B8wGo-SpoUJc-So_3FruMcg?e=LL3u6V) where you can download the three folders, `fer+`, `fer`, and `sfew`. Please save the three folders under `pytorch_benchmarks/models`.
+
+You can download weights of the multitask CNN and multitask CNN-RNN pretrained on the Aff-wild2 by running:
+
+```
+bash download_pretrained_weights_aff_wild2.sh 
+``` 
+
 
 ## How to replicate our results
 1. Download all required datasets, crop and align face images;
