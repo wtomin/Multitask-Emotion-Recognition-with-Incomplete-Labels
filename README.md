@@ -3,7 +3,7 @@ This is the repository containing the solution for FG-2020 ABAW Competition
 
 Pretrained models can be downloaded through this [link](https://hkustconnect-my.sharepoint.com/:f:/g/personal/ddeng_connect_ust_hk/EnX91m9VSHlFobaIag82W_8B3YRkir97H1QmiUlkZu1zAw?e=LGgDNE) under the `Multitask-CNN` and `Multitask-CNN-RNN` folders.
 
- [Paper](https://www.computer.org/csdl/pds/api/csdl/proceedings/download-article/1kecJ0EYZxK/pdf),   [Presentation](https://hkustconnect-my.sharepoint.com/:v:/g/personal/ddeng_connect_ust_hk/ETn3jr7KVX1JjJ_MP8Ua8MEBIEP2WcJyyviYApd951qh4g?e=KOkr8Z)
+ [Paper](https://www.computer.org/csdl/pds/api/csdl/proceedings/download-article/1kecJ0EYZxK/pdf),   [Presentation](https://hkustconnect-my.sharepoint.com/:v:/g/personal/ddeng_connect_ust_hk/EZc6HS2fLe5MjzJM4WpzJQsBITfaK2jtGYvYSsSxJsCIbQ?e=UyXiaK)
  
 We aim for a unifed model to solve three tasks: Facial Action Units (FAU) prediction, Facial Expression (7 basic emotions) prediction, Valence and Arousal prediction. For abbreviation, we refer to them as FAU, EXPR and VA.
 
